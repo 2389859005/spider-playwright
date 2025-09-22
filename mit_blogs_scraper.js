@@ -353,6 +353,7 @@ async function run() {
   let outPath = path.resolve(__dirname, 'mit_blogs.csv');
   let sinceISO = null;
   let concurrency = 2;
+  let limitCount = null;
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === '--urls' && args[i + 1]) {
@@ -369,6 +370,10 @@ async function run() {
     } else if (a === '--concurrency' && args[i + 1]) {
       const v = parseInt(args[i + 1], 10);
       if (Number.isFinite(v) && v > 0 && v <= 10) concurrency = v;
+      i++;
+    } else if (a === '--limit' && args[i + 1]) {
+      const v = parseInt(args[i + 1], 10);
+      if (Number.isFinite(v) && v > 0) limitCount = v;
       i++;
     } else if (/^https?:\/\//i.test(a)) {
       specificUrls.push(a);
@@ -432,10 +437,11 @@ async function run() {
   // Fetch all post URLs via WordPress REST API when --all is set
   const getAllPostLinks = async () => {
     const req = await playwrightRequest.newContext();
-const base = 'https://mitadmissions.org/wp-json/wp/v2/posts?per_page=100&_fields=link,date&_embed=0&orderby=date&order=desc';
+    const base = 'https://mitadmissions.org/wp-json/wp/v2/posts?per_page=100&_fields=link,date&_embed=0&orderby=date&order=desc';
     let links = [];
     let pageNo = 1;
     let totalPages = 1;
+    let reachedLimit = false;
     while (true) {
       const url = `${base}&page=${pageNo}`;
       const resp = await req.get(url);
@@ -450,7 +456,9 @@ const base = 'https://mitadmissions.org/wp-json/wp/v2/posts?per_page=100&_fields
           continue;
         }
         links.push({ href: link, seed: { time: date } });
+        if (limitCount && links.length >= limitCount) { reachedLimit = true; break; }
       }
+      if (reachedLimit) break;
       pageNo++;
       if (pageNo > totalPages) break;
     }
@@ -462,21 +470,25 @@ const base = 'https://mitadmissions.org/wp-json/wp/v2/posts?per_page=100&_fields
       seen.add(x.href);
       return true;
     });
+    if (limitCount) links = links.slice(0, limitCount);
     return links;
   };
 
   if (specificUrls.length > 0) {
-    const items = specificUrls.map((u) => ({ href: u }));
+    let items = specificUrls.map((u) => ({ href: u }));
+    if (limitCount) items = items.slice(0, limitCount);
     const out = await runPool(items);
     results.push(...out);
   } else if (crawlAll) {
-    const all = await getAllPostLinks();
+    let all = await getAllPostLinks();
+    if (limitCount) all = all.slice(0, limitCount);
     const out = await runPool(all);
     results.push(...out);
   } else {
     await page.goto('https://mitadmissions.org/blogs/', { waitUntil: 'domcontentloaded' });
     const listing = await extractListing(page);
-    const items = listing.map((x) => ({ href: x.href, seed: x }));
+    let items = listing.map((x) => ({ href: x.href, seed: x }));
+    if (limitCount) items = items.slice(0, limitCount);
     const out = await runPool(items);
     results.push(...out);
   }

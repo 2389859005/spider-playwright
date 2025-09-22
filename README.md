@@ -41,7 +41,7 @@
 
 ## 使用方法
 所有命令都应从项目目录运行：
-- D:\download\vscodetest\d5data\spider-2
+- D:\\download\\vscodetest\\d5data\\spider-playwright
 
 安装依赖：
 - npm install
@@ -55,6 +55,9 @@
 爬取所有文章（全站）：
 - node mit_blogs_scraper.js --all
 
+限制爬取数量（例如仅前 500 篇）：
+- node mit_blogs_scraper.js --all --limit 500 --out ".\mit_blogs_first500.csv"
+
 爬取自某个日期以来的所有文章：
 - node mit_blogs_scraper.js --all --since 2023-01-01
 
@@ -65,8 +68,8 @@
 - node mit_blogs_scraper.js --all --concurrency 4
 
 Windows 一键运行（批处理脚本）：
-- run-scraper.cmd all [--since YYYY-MM-DD] [--out "C:\path\to\out.csv"] [--concurrency N]
-- run-scraper.cmd urls "URL1,URL2,..." [--out "C:\path\to\out.csv"]
+- run-scraper.cmd all [--since YYYY-MM-DD] [--out "C:\\path\\to\\out.csv"] [--concurrency N] [--limit N]
+- run-scraper.cmd urls "URL1,URL2,..." [--out "C:\\path\\to\\out.csv"] [--limit N]
 - run-scraper.cmd    (快速测试)
 
 注意事项：
